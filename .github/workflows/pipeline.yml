@@ -1,0 +1,50 @@
+name: Run DVF Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Allows manual triggering of the workflow
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 1. Preprocess step
+        run: python src/preprocessing.py
+
+      - name: 2. Feature engineering step
+        run: python src/feature_engineering.py
+
+      - name: 3. Train linear models
+        run: python src/linear_models.py
+
+      - name: 4. Train complex models
+        run: python src/complex_models.py
+
+      - name: 5. Evaluate linear models
+        run: python src/evaluation_linear.py
+
+      - name: 6. Evaluate complex models
+        run: python src/evaluation_complex.py
+
+      - name: Report results as git-artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dvf-results
+          path: results/
