@@ -87,8 +87,8 @@ def temporal_train_val_test_split(df: pd.DataFrame,
     print(f"Train (<{val_year}):  {len(train_df):>10,} samples ({train_pct:>5.2f}%)")
     print(f"Val   (={val_year}):  {len(val_df):>10,} samples ({val_pct:>5.2f}%)")
     print(f"Test  (={test_year}):  {len(test_df):>10,} samples ({test_pct:>5.2f}%)")
-    print(f"Train+Val: {train_pct+val_pct:.2f}% {'✓' if train_pct+val_pct >= 80 else '✗'}")
-    print(f"Test:      {test_pct:.2f}%  {'✓' if test_pct <= 20 else '✗'}")
+    print(f"Train+Val: {train_pct+val_pct:.2f}% {'80%' if train_pct+val_pct >= 80 else '✗'}")
+    print(f"Test:      {test_pct:.2f}%  {'20%' if test_pct <= 20 else '✗'}")
     
     return train_df, val_df, test_df
 
