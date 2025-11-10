@@ -83,7 +83,7 @@ def load_data(folder: str) -> pd.DataFrame:
         if filename.endswith('.csv') and filename.startswith('dvf_'):
             file_path = os.path.join(folder, filename)
             print(f"Loading {filename}...")
-            df = pd.read_csv(file_path, low_memory=False)
+            df = pd.read_csv(file_path, sep=",", encoding="utf-8", low_memory=False)
             data_frames.append(df)
             print(f"  Loaded {len(df):,} rows")
     
