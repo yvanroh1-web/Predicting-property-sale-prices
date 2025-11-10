@@ -8,28 +8,32 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-def load_splits(train_path: str = "data/processed/train_split.parquet", 
+def load_splits(train_path: str = "data/processed/train_split.parquet",
+                val_path: str = "data/processed/val_split.parquet",
                 test_path: str = "data/processed/test_split.parquet"):
     """
-    Load train and test splits from Parquet files.
+    Load train, validation and test splits from Parquet files.
     
     Parameters:
     train_path (str): Path to training split.
+    val_path (str): Path to validation split.
     test_path (str): Path to test split.
     
     Returns:
-    tuple: train_df, test_df.
+    tuple: train_df, val_df, test_df.
     """
-    if not os.path.exists(train_path) or not os.path.exists(test_path):
-        raise FileNotFoundError("Train/test splits not found. Run models.py first.")
+    if not os.path.exists(train_path) or not os.path.exists(val_path) or not os.path.exists(test_path):
+        raise FileNotFoundError("Train/val/test splits not found. Run models.py first.")
     
     train_df = pd.read_parquet(train_path)
+    val_df = pd.read_parquet(val_path)
     test_df = pd.read_parquet(test_path)
     
     print(f"Loaded train split: {len(train_df):,} rows")
+    print(f"Loaded val split: {len(val_df):,} rows")
     print(f"Loaded test split: {len(test_df):,} rows")
     
-    return train_df, test_df
+    return train_df, val_df, test_df
 
 def prepare_data(df: pd.DataFrame, target_col: str = 'log_valeur_fonciere'):
     """
@@ -70,13 +74,14 @@ def load_models(models_dir: str = "models"):
     
     return models
 
-def evaluate_model(model, X_train, y_train, X_test, y_test, model_name: str):
+def evaluate_model(model, X_train, y_train, X_val, y_val, X_test, y_test, model_name: str):
     """
-    Evaluate model performance on train and test sets.
+    Evaluate model performance on train, validation and test sets.
     
     Parameters:
     model: Trained model pipeline.
     X_train, y_train: Training features and target.
+    X_val, y_val: Validation features and target.
     X_test, y_test: Test features and target.
     model_name (str): Name of the model.
     
@@ -85,12 +90,17 @@ def evaluate_model(model, X_train, y_train, X_test, y_test, model_name: str):
     """
     # Make predictions
     y_train_pred = model.predict(X_train)
+    y_val_pred = model.predict(X_val)
     y_test_pred = model.predict(X_test)
     
     # Calculate metrics on log scale
     train_mae_log = mean_absolute_error(y_train, y_train_pred)
     train_rmse_log = np.sqrt(mean_squared_error(y_train, y_train_pred))
     train_r2 = r2_score(y_train, y_train_pred)
+    
+    val_mae_log = mean_absolute_error(y_val, y_val_pred)
+    val_rmse_log = np.sqrt(mean_squared_error(y_val, y_val_pred))
+    val_r2 = r2_score(y_val, y_val_pred)
     
     test_mae_log = mean_absolute_error(y_test, y_test_pred)
     test_rmse_log = np.sqrt(mean_squared_error(y_test, y_test_pred))
@@ -99,14 +109,18 @@ def evaluate_model(model, X_train, y_train, X_test, y_test, model_name: str):
     # Convert to original price scale
     train_actual_price = np.expm1(y_train)
     train_pred_price = np.expm1(y_train_pred)
+    val_actual_price = np.expm1(y_val)
+    val_pred_price = np.expm1(y_val_pred)
     test_actual_price = np.expm1(y_test)
     test_pred_price = np.expm1(y_test_pred)
     
     # Calculate MAE and RMSE (use median for MAE to reduce outlier impact)
     train_mae_price = np.median(np.abs(train_actual_price - train_pred_price))
+    val_mae_price = np.median(np.abs(val_actual_price - val_pred_price))
     test_mae_price = np.median(np.abs(test_actual_price - test_pred_price))
     
     train_rmse_price = np.sqrt(np.mean((train_actual_price - train_pred_price)**2))
+    val_rmse_price = np.sqrt(np.mean((val_actual_price - val_pred_price)**2))
     test_rmse_price = np.sqrt(np.mean((test_actual_price - test_pred_price)**2))
     
     return {
@@ -114,11 +128,16 @@ def evaluate_model(model, X_train, y_train, X_test, y_test, model_name: str):
         'Train MAE (log)': train_mae_log,
         'Train RMSE (log)': train_rmse_log,
         'Train R²': train_r2,
+        'Val MAE (log)': val_mae_log,
+        'Val RMSE (log)': val_rmse_log,
+        'Val R²': val_r2,
         'Test MAE (log)': test_mae_log,
         'Test RMSE (log)': test_rmse_log,
         'Test R²': test_r2,
         'Train MAE (€)': train_mae_price,
         'Train RMSE (€)': train_rmse_price,
+        'Val MAE (€)': val_mae_price,
+        'Val RMSE (€)': val_rmse_price,
         'Test MAE (€)': test_mae_price,
         'Test RMSE (€)': test_rmse_price
     }
@@ -128,15 +147,13 @@ def create_comparison_table(results: list) -> pd.DataFrame:
     Create and display model comparison table.
     
     Parameters:
-    results (list): List of evaluation result dictionaries.
+    results (list): List of evaluation results.
     
     Returns:
     pd.DataFrame: Sorted results dataframe.
     """
     df_results = pd.DataFrame(results)
     df_results = df_results.sort_values('Test R²', ascending=False)
-    print("\nModel Performance Comparison:")
-    print(df_results.to_string(index=False))
     return df_results
 
 def plot_predictions_vs_actual(models, X_test, y_test, output_dir: str = "results/plots"):
@@ -188,40 +205,6 @@ def plot_predictions_vs_actual(models, X_test, y_test, output_dir: str = "result
     print(f"Saved plot: {plot_path}")
     plt.close()
 
-def plot_residuals(models, X_test, y_test, output_dir: str = "results/plots"):
-    """
-    Generate residual distribution histograms.
-    
-    Parameters:
-    models (dict): Dictionary of trained models.
-    X_test: Test features.
-    y_test: Test target values.
-    output_dir (str): Directory to save plots.
-    """
-    os.makedirs(output_dir, exist_ok=True)
-    
-    fig, axes = plt.subplots(1, len(models), figsize=(6*len(models), 5))
-    if len(models) == 1:
-        axes = [axes]
-    
-    for idx, (name, model) in enumerate(models.items()):
-        y_pred = model.predict(X_test)
-        residuals = y_test - y_pred
-        
-        # Create histogram
-        axes[idx].hist(residuals, bins=50, edgecolor='black', alpha=0.7)
-        axes[idx].axvline(x=0, color='r', linestyle='--', lw=2)
-        axes[idx].set_xlabel('Residuals (log scale)')
-        axes[idx].set_ylabel('Frequency')
-        axes[idx].set_title(f'{name}\nMean: {residuals.mean():.4f}, Std: {residuals.std():.4f}')
-        axes[idx].grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    plot_path = os.path.join(output_dir, 'residuals_distribution.png')
-    plt.savefig(plot_path, dpi=300, bbox_inches='tight')
-    print(f"Saved plot: {plot_path}")
-    plt.close()
-
 def plot_metrics_comparison(df_results: pd.DataFrame, output_dir: str = "results/plots"):
     """
     Generate bar charts comparing model metrics, fast visual return of performance.
@@ -234,11 +217,13 @@ def plot_metrics_comparison(df_results: pd.DataFrame, output_dir: str = "results
     
     fig, axes = plt.subplots(1, 3, figsize=(18, 5))
     x = range(len(df_results))
+    width = 0.25
     
     # MAE comparison
-    axes[0].bar(x, df_results['Test MAE (€)'], alpha=0.7, label='Test', color='steelblue')
-    axes[0].bar([i+0.35 for i in x], df_results['Train MAE (€)'], width=0.35, alpha=0.7, label='Train', color='orange')
-    axes[0].set_xticks([i+0.175 for i in x])
+    axes[0].bar([i-width for i in x], df_results['Train MAE (€)'], width=width, alpha=0.7, label='Train', color='orange')
+    axes[0].bar(x, df_results['Val MAE (€)'], width=width, alpha=0.7, label='Val', color='green')
+    axes[0].bar([i+width for i in x], df_results['Test MAE (€)'], width=width, alpha=0.7, label='Test', color='steelblue')
+    axes[0].set_xticks(x)
     axes[0].set_xticklabels(df_results['Model'], rotation=45, ha='right')
     axes[0].set_ylabel('MAE (€)')
     axes[0].set_title('Mean Absolute Error')
@@ -246,9 +231,10 @@ def plot_metrics_comparison(df_results: pd.DataFrame, output_dir: str = "results
     axes[0].grid(True, alpha=0.3)
     
     # RMSE comparison
-    axes[1].bar(x, df_results['Test RMSE (€)'], alpha=0.7, label='Test', color='steelblue')
-    axes[1].bar([i+0.35 for i in x], df_results['Train RMSE (€)'], width=0.35, alpha=0.7, label='Train', color='orange')
-    axes[1].set_xticks([i+0.175 for i in x])
+    axes[1].bar([i-width for i in x], df_results['Train RMSE (€)'], width=width, alpha=0.7, label='Train', color='orange')
+    axes[1].bar(x, df_results['Val RMSE (€)'], width=width, alpha=0.7, label='Val', color='green')
+    axes[1].bar([i+width for i in x], df_results['Test RMSE (€)'], width=width, alpha=0.7, label='Test', color='steelblue')
+    axes[1].set_xticks(x)
     axes[1].set_xticklabels(df_results['Model'], rotation=45, ha='right')
     axes[1].set_ylabel('RMSE (€)')
     axes[1].set_title('Root Mean Squared Error')
@@ -256,9 +242,10 @@ def plot_metrics_comparison(df_results: pd.DataFrame, output_dir: str = "results
     axes[1].grid(True, alpha=0.3)
     
     # R² comparison
-    axes[2].bar(x, df_results['Test R²'], alpha=0.7, label='Test', color='steelblue')
-    axes[2].bar([i+0.35 for i in x], df_results['Train R²'], width=0.35, alpha=0.7, label='Train', color='orange')
-    axes[2].set_xticks([i+0.175 for i in x])
+    axes[2].bar([i-width for i in x], df_results['Train R²'], width=width, alpha=0.7, label='Train', color='orange')
+    axes[2].bar(x, df_results['Val R²'], width=width, alpha=0.7, label='Val', color='green')
+    axes[2].bar([i+width for i in x], df_results['Test R²'], width=width, alpha=0.7, label='Test', color='steelblue')
+    axes[2].set_xticks(x)
     axes[2].set_xticklabels(df_results['Model'], rotation=45, ha='right')
     axes[2].set_ylabel('R²')
     axes[2].set_title('R² Score')
@@ -286,7 +273,7 @@ def save_results(df_results: pd.DataFrame, output_path: str = "results/evaluatio
 
 def print_best_model(df_results: pd.DataFrame):
     """
-    Display summary of best performing model.
+    Display summary of best model (more accurate).
     
     Parameters:
     df_results (pd.DataFrame): Results dataframe sorted by performance.
@@ -294,6 +281,8 @@ def print_best_model(df_results: pd.DataFrame):
     best_model = df_results.iloc[0]
     
     print(f"\nBest Model: {best_model['Model']}")
+    print(f"  Train R²: {best_model['Train R²']:.4f}")
+    print(f"  Val R²: {best_model['Val R²']:.4f}")
     print(f"  Test R²: {best_model['Test R²']:.4f}")
     print(f"  Test MAE: {best_model['Test MAE (€)']:,.0f}€")
     print(f"  Test RMSE: {best_model['Test RMSE (€)']:,.0f}€")
@@ -303,9 +292,10 @@ if __name__ == "__main__":
     # Execution of evaluation steps
     print("Model Evaluation\n")
     
-    # Load train and test data
-    train_df, test_df = load_splits()
+    # Load train, validation and test data
+    train_df, val_df, test_df = load_splits()
     X_train, y_train = prepare_data(train_df)
+    X_val, y_val = prepare_data(val_df)
     X_test, y_test = prepare_data(test_df)
     
     # Load trained models
@@ -316,9 +306,9 @@ if __name__ == "__main__":
     print("\nEvaluating models:")
     results = []
     for name, model in models.items():
-        result = evaluate_model(model, X_train, y_train, X_test, y_test, name)
+        result = evaluate_model(model, X_train, y_train, X_val, y_val, X_test, y_test, name)
         results.append(result)
-        print(f"  {name}: R²={result['Test R²']:.4f}, MAE={result['Test MAE (€)']:,.0f}€")
+        print(f"  {name}: Val R²={result['Val R²']:.4f}, Test R²={result['Test R²']:.4f}, Test MAE={result['Test MAE (€)']:,.0f}€")
     
     # Create comparison table
     df_results = create_comparison_table(results)
@@ -326,10 +316,8 @@ if __name__ == "__main__":
     # Print best model summary
     print_best_model(df_results)
     
-    # Generate visualizations
     print("Generating visualizations:")
     plot_predictions_vs_actual(models, X_test, y_test)
-    plot_residuals(models, X_test, y_test)
     plot_metrics_comparison(df_results)
     
     # Save results to CSV
