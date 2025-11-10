@@ -28,24 +28,93 @@ def load_data(input_path: str = "data/processed/dvf_featured.parquet") -> pd.Dat
     return df
 
 
-def temporal_train_test_split(df: pd.DataFrame, test_year: int = 2024) -> tuple:
-    """Split data temporally: train < test_year, test = test_year.
-
+def temporal_train_val_test_split(df: pd.DataFrame, 
+                                   val_year: int = 2023,
+                                   test_year: int = 2024) -> tuple:
+    """
+    Split data into train/validation/test with temporal ordering (year col).
+    
     Parameters:
-    df (pd.DataFrame): Input dataframe with a 'year' column.
-    test_year (int): Year to use for the test set.
-
+    df (pd.DataFrame): Input dataframe 
+    val_year (int): Year to use for validation set (2023)
+    test_year (int): Year to use for test set (2024)
+    
     Returns:
-    tuple: (train_df, test_df)
+    tuple: (train_df, val_df, test_df)
+    
+    Example: val_year=2023, test_year=2024
+    → Train: <2023 (2020-2022)
+    → Val: =2023
+    → Test: =2024
     """
     if 'year' not in df.columns:
         raise KeyError("Column 'year' required for temporal split")
     
-    train_df = df[df['year'] < test_year].copy()
+    train_df = df[df['year'] < val_year].copy()
+    val_df = df[df['year'] == val_year].copy()
     test_df = df[df['year'] == test_year].copy()
     
-    print(f"\nTemporal split: {len(train_df):,} train | {len(test_df):,} test")
-    return train_df, test_df
+    total = len(df)
+    train_pct = len(train_df) / total * 100
+    val_pct = len(val_df) / total * 100
+    test_pct = len(test_df) / total * 100
+    
+    print("Temporal Train/Val/Test split:")
+    print(f"Train (<{val_year}):  {len(train_df):>10,} samples ({train_pct:>5.2f}%)")
+    print(f"Val   (={val_year}):  {len(val_df):>10,} samples ({val_pct:>5.2f}%)")
+    print(f"Test  (={test_year}):  {len(test_df):>10,} samples ({test_pct:>5.2f}%)")
+    print(f"Train+Val: {train_pct+val_pct:.2f}% {'✓' if train_pct+val_pct >= 80 else '✗'}")
+    print(f"Test:      {test_pct:.2f}%  {'✓' if test_pct <= 20 else '✗'}")
+    
+    return train_df, val_df, test_df
+
+
+def add_department_features_safe(train_df: pd.DataFrame, other_df: pd.DataFrame) -> tuple:
+    """
+    Add department aggregate features AFTER split to prevent data leakage.
+    
+    This function:
+    1. Calculates department median price (just on train data)
+    2. Applies these statistics to both train and other_df (val or test)
+    3. Creates relative price features
+    
+    Parameters:
+    train_df (pd.DataFrame): Training dataframe
+    other_df (pd.DataFrame): Validation or test dataframe
+    
+    Returns:
+    tuple: (train_df_with_features, other_df_with_features)
+    """
+    print(f"Adding department features:\n")
+    
+    if 'code_departement' not in train_df.columns:
+        raise KeyError("Column 'code_departement' not found")
+    if 'valeur_fonciere' not in train_df.columns:
+        raise KeyError("Column 'valeur_fonciere' not found")
+    
+    dept_stats_train = train_df.groupby('code_departement')['valeur_fonciere'].agg([
+        ('dept_median_price', 'median')
+    ]).reset_index()
+    
+    if 'dept_median_price' not in train_df.columns:
+        train_df = train_df.merge(dept_stats_train, on='code_departement', how='left')
+        train_df['price_vs_dept_median'] = train_df['valeur_fonciere'] / train_df['dept_median_price']
+        train_df['price_vs_dept_median'] = train_df['price_vs_dept_median'].replace([np.inf, -np.inf], np.nan)
+    
+    other_df = other_df.merge(dept_stats_train, on='code_departement', how='left')
+    other_df['price_vs_dept_median'] = other_df['valeur_fonciere'] / other_df['dept_median_price']
+    other_df['price_vs_dept_median'] = other_df['price_vs_dept_median'].replace([np.inf, -np.inf], np.nan)
+    
+    missing_count = other_df['dept_median_price'].isna().sum()
+    if missing_count > 0:
+        print(f"ATTENTION! --> {missing_count} samples with unseen departments - filling with global median")
+        global_median = train_df['valeur_fonciere'].median()
+        other_df['dept_median_price'].fillna(global_median, inplace=True)
+        other_df['price_vs_dept_median'].fillna(1.0, inplace=True)
+    
+    print(f"Features added: dept_median_price, price_vs_dept_median\n")
+    
+    return train_df, other_df
 
 
 def prepare_features_target(df: pd.DataFrame, target_col: str = 'log_valeur_fonciere') -> tuple:
@@ -93,7 +162,7 @@ def create_preprocessing_pipeline(numeric_features: list, categorical_features: 
 
 
 def train_models(X_train, y_train, preprocessor) -> dict:
-    """Train and return all linear regression models.
+    """Train and return The 3b linear regression models.
     
     Parameters:
     X_train (pd.DataFrame): Training features.
@@ -148,34 +217,44 @@ def save_all_models(fitted_models: dict, output_dir: str = "models") -> dict:
     return saved_paths
 
 
-def save_split_data(train_df, test_df, output_dir: str = "data/processed") -> None:
-    """Save train/test splits for evaluation.
+def save_split_data(train_df, val_df, test_df, output_dir: str = "data/processed") -> None:
+    """Save train/validation/test splits for evaluation.
     
     Parameters:
-    train_df (pd.DataFrame): Training dataframe.
-    test_df (pd.DataFrame): Testing dataframe.
-    output_dir (str): Directory to save splits.
+    train_df (pd.DataFrame): Training dataframe
+    val_df (pd.DataFrame): Validation dataframe
+    test_df (pd.DataFrame): Testing dataframe
+    output_dir (str): Directory to save splits
     """
     os.makedirs(output_dir, exist_ok=True)
+    
     train_df.to_parquet(f"{output_dir}/train_split.parquet", index=False)
+    val_df.to_parquet(f"{output_dir}/val_split.parquet", index=False)
     test_df.to_parquet(f"{output_dir}/test_split.parquet", index=False)
-    print(f"Saved splits to {output_dir}")
+    
+    print(f"\nSaved splits to {output_dir}:")
+    print(f"  train_split.parquet: {len(train_df):,} samples")
+    print(f"  val_split.parquet:   {len(val_df):,} samples")
+    print(f"  test_split.parquet:  {len(test_df):,} samples")
 
 
 if __name__ == "__main__":
-    print("Property price prediction - Linear models training\n")
+    print("Property price prediction - Linear Models:")
     
-    # Load and split data
     df = load_data()
-    train_df, test_df = temporal_train_test_split(df)
-    save_split_data(train_df, test_df)
+    train_df, val_df, test_df = temporal_train_val_test_split(df, val_year=2023, test_year=2024)
     
-    # Prepare features and preprocessing
+    print("\nAdding department aggregate features:")
+    train_df, val_df = add_department_features_safe(train_df, val_df)
+    train_df, test_df = add_department_features_safe(train_df, test_df)
+    
+    save_split_data(train_df, val_df, test_df)
+    
     X_train, y_train, num_feats, cat_feats = prepare_features_target(train_df)
     preprocessor = create_preprocessing_pipeline(num_feats, cat_feats)
     
-    # Train and save models
     all_models = train_models(X_train, y_train, preprocessor)
     save_all_models(all_models)
     
-    print(f"\n✓ Training completed - {len(all_models)} models saved")
+    print(f"\nTraining completed - {len(all_models)} models saved")
+    print(f"Splits saved with validation set for evaluation")
