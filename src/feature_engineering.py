@@ -70,45 +70,6 @@ def convert_price_to_logarithmic(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
-def add_department_aggregates(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Add aggregate feature department-level median price.
-    
-    Features added:
-    - 'dept_median_price': Median price per department (robust to outliers)
-    - 'price_vs_dept_median': Ratio of property price to department median
-    
-    Parameters:
-    df (pd.DataFrame): Input DataFrame.
-    
-    Returns:
-    pd.DataFrame: DataFrame with aggregate features.
-    """
-    if 'code_departement' not in df.columns:
-        raise KeyError("Column 'code_departement' is missing from DataFrame")
-    if 'valeur_fonciere' not in df.columns:
-        raise KeyError("Column 'valeur_fonciere' is missing from DataFrame")
-    
-    # Calculate department-level median price
-    dept_stats = df.groupby('code_departement')['valeur_fonciere'].agg([
-        ('dept_median_price', 'median')
-    ]).reset_index()
-    
-    # Merge aggregates back to original dataframe
-    df = df.merge(dept_stats, on='code_departement', how='left')
-    
-    # Create relative price feature (how much respect to department median)
-    df['price_vs_dept_median'] = df['valeur_fonciere'] / df['dept_median_price']
-    
-    # Handle issues division by zero or NaN
-    df['price_vs_dept_median'] = df['price_vs_dept_median'].replace([np.inf, -np.inf], np.nan)
-    
-    print(f"Added department aggregate features:")
-    print(f"  - dept_median_price: Median price per department")
-    print(f"  - price_vs_dept_median: Ratio to department median")
-    
-    return df
-
 def handle_outliers_percentile(df: pd.DataFrame, lower: float = 0.001, upper: float = 0.999) -> pd.DataFrame:
     """
     Remove outliers based on price percentiles only.
@@ -159,23 +120,16 @@ def select_modeling_features(df: pd.DataFrame) -> pd.DataFrame:
         'nombre_pieces_principales',
         'surface_terrain',
         'nombre_lots',
-        
         # Categorical features
         'type_local',
         'nature_mutation',
         'code_departement',
-        
         # Geographic features
         'longitude',
         'latitude',
-        
         # Temporal features
         'year',
         'month',
-        
-        # Department aggregate features
-        'dept_median_price',
-        'price_vs_dept_median',
     ]
     
     # Keep only available columns
@@ -197,23 +151,19 @@ def process_features(df: pd.DataFrame) -> pd.DataFrame:
 
     Steps:
     1. Add time-based predictive features (year, month)
-    2. Add departement aggregate features (median price)
-    3. Log-transform prices (stabilize skew)
-    4. Remove statistical outliers (percentile method)
-    5. Select relevant features for modeling
-    6. Drop rows with missing values in critical features
+    2. Log-transform prices (stabilize skew)
+    3. Remove statistical outliers (percentile method)
+    4. Select relevant features for modeling
+    5. Drop rows with missing values in critical features
 
     Returns:
     pd.DataFrame: Final processed DataFrame ready for modeling.
     """
-    print("\n" + "=" * 80)
-    print("FEATURE ENGINEERING PIPELINE")
-    print("=" * 80)
-    print(f"Starting with {len(df):,} rows\n")
+    print("Feature Engineering Pipeline:")
+    print(f"\nStarting with {len(df):,} rows\n")
 
     # Step 1-3: Feature creation
     df = add_datetime_features(df)
-    df = add_department_aggregates(df)
     df = convert_price_to_logarithmic(df)
 
     # Step 4: Remove outliers using percentile method
@@ -234,9 +184,7 @@ def process_features(df: pd.DataFrame) -> pd.DataFrame:
     percentage = (dropped / before_drop * 100) if before_drop > 0 else 0
     print(f"Removed {dropped:,} rows ({percentage:.1f}%) with missing critical features")
     
-    print("\n" + "=" * 80)
     print(f"Feature Engineering completed with {len(df):,} rows")
-    print("=" * 80 + "\n")
 
     return df
 
