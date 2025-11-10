@@ -205,11 +205,18 @@ def save_clean_data(df: pd.DataFrame, output_path: str = "data/processed/dvf_pro
 if __name__ == "__main__":
     print("DVF dataset (2020-2024) preprocessing:")
     print("\nData source: https://www.data.gouv.fr/fr/datasets/demandes-de-valeurs-foncieres/")
-    
+
+    IS_CI = os.getenv("GITHUB_ACTIONS") == "true"
     raw_folder = "data/raw"
-    download_dvf_data(raw_folder)
-    
-    df = load_data(raw_folder)
+
+    if IS_CI:
+        print("Detected CI environment – using local raw data from repository")
+        if not os.path.exists(raw_folder) or not any(f.endswith(".csv") for f in os.listdir(raw_folder)):
+            raise FileNotFoundError("No CSV files found in data/raw/. Please include DVF raw files in the repository.")
+        df = load_data(raw_folder)
+    else:
+        download_dvf_data(raw_folder)
+        df = load_data(raw_folder)
     
     df = remove_empty_columns(df)
     df = filter_transactions(df)
