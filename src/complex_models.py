@@ -192,7 +192,7 @@ def create_preprocessing_pipeline(numeric_features: list, categorical_features: 
     return ColumnTransformer(transformers, remainder='drop', verbose_feature_names_out=False)
 
 
-def train_model(X_train, y_train, preprocessor, model_type: str = 'rf', sample_size: int = 5000000) -> Pipeline:
+def train_model(X_train, y_train, preprocessor, model_type: str = 'rf', sample_size: int = 1000000) -> Pipeline:
     """Train Random Forest or XGBoost model with sampling.
 
     Parameters:

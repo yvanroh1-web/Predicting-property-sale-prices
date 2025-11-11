@@ -251,6 +251,12 @@ if __name__ == "__main__":
     save_split_data(train_df, val_df, test_df)
     
     X_train, y_train, num_feats, cat_feats = prepare_features_target(train_df)
+    if len(X_train) > 1000000:
+        print(f"\nSampling 1M rows from {len(X_train):,}...")
+        idx = np.random.choice(len(X_train), size=1000000, replace=False)
+        X_train = X_train.iloc[idx]
+        y_train = y_train.iloc[idx]
+        
     preprocessor = create_preprocessing_pipeline(num_feats, cat_feats)
     
     all_models = train_models(X_train, y_train, preprocessor)
