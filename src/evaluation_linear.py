@@ -298,6 +298,23 @@ if __name__ == "__main__":
     X_val, y_val = prepare_data(val_df)
     X_test, y_test = prepare_data(test_df)
     
+    # Sample data also in eval for Github Actions
+    print("\nSampling data for evaluation:")
+    if len(X_train) > 100000:
+        idx = np.random.choice(len(X_train), size=100000, replace=False)
+        X_train, y_train = X_train.iloc[idx], y_train.iloc[idx]
+        print(f"  Train: sampled 100k from original size")
+    
+    if len(X_val) > 50000:
+        idx = np.random.choice(len(X_val), size=50000, replace=False)
+        X_val, y_val = X_val.iloc[idx], y_val.iloc[idx]
+        print(f"  Val: sampled 50k from original size")
+    
+    if len(X_test) > 50000:
+        idx = np.random.choice(len(X_test), size=50000, replace=False)
+        X_test, y_test = X_test.iloc[idx], y_test.iloc[idx]
+        print(f"  Test: sampled 50k from original size")
+    
     # Load trained models
     print("\nLoading models:")
     models = load_models()
