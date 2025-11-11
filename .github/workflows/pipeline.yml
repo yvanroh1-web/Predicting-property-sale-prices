@@ -25,8 +25,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: 1. Preprocess step
-        run: python src/preprocessing.py
+      # Skip preprocessing, there are some problems with the data source (download problem
+      # - name: 1. Preprocess step
+      # run: python src/preprocessing.py 
 
       - name: 2. Feature engineering step
         run: python src/feature_engineering.py
