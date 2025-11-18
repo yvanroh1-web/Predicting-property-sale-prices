@@ -15,7 +15,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          lfs: false
+          lfs: true  # Ensure Git LFS files arre available
 
       - name: Set up Python
         uses: actions/setup-python@v5
