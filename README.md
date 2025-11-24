@@ -90,7 +90,8 @@ python src/preprocessing.py
 
 **Output:** `data/processed/dvf_processed.parquet` 
 
-**Note:** This step is not included in CI/CD automation due to Git LFS monthly bandwidth limits for large CSV files.
+**Note:** This step is not included in CI/CD automation due to Git LFS monthly bandwidth limits for large CSV files.<br>
+Pipeline error: "This repository exceeded its LFS budget. The account responsible for the budget should increase it to restore access."
 
 ### Step 2: Feature Engineering
 ```bash
