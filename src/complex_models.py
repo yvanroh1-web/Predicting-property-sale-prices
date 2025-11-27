@@ -69,9 +69,9 @@ def temporal_train_val_test_split(df: pd.DataFrame,
     tuple: (train_df, val_df, test_df)
 
     Example: val_year=2023, test_year=2024
-    → Train: <2023 (2020-2022)
-    → Val: =2023
-    → Test: =2024
+    -> Train: <2023 (2020-2022)
+    -> Val: =2023
+    -> Test: =2024
     """
     if 'year' not in df.columns:
         raise KeyError("Column 'year' required for temporal split")
@@ -89,8 +89,8 @@ def temporal_train_val_test_split(df: pd.DataFrame,
     print(f"Train (<{val_year}):  {len(train_df):>10,} samples ({train_pct:>5.2f}%)")
     print(f"Val   (={val_year}):  {len(val_df):>10,} samples ({val_pct:>5.2f}%)")
     print(f"Test  (={test_year}):  {len(test_df):>10,} samples ({test_pct:>5.2f}%)")
-    print(f"Train+Val: {train_pct+val_pct:.2f}% {'80%' if train_pct+val_pct >= 80 else '✗'}")
-    print(f"Test:      {test_pct:.2f}%  {'20%' if test_pct <= 20 else '✗'}")
+    print(f"Train+Val: {train_pct+val_pct:.2f}% {'80%' if train_pct+val_pct >= 80 else 'x'}")
+    print(f"Test:      {test_pct:.2f}%  {'20%' if test_pct <= 20 else 'x'}")
 
     return train_df, val_df, test_df
 
@@ -281,7 +281,8 @@ def save_split_data(train_df, val_df, test_df, output_dir: str = "data/processed
     print(f"  test_split_timeaware.parquet:  {len(test_df):,} samples")
 
 
-if __name__ == "__main__":
+def main():
+    """Main function to run the time-aware model training pipeline."""
     print("Time-aware model training (Random Forest & XGBoost)\n")
 
     # Load and prepare data
@@ -301,9 +302,13 @@ if __name__ == "__main__":
     preprocessor = create_preprocessing_pipeline(num_feats, cat_feats)
 
     # Train both models
-    rf_model = train_model(X_train, y_train, preprocessor, model_type='rf') # Rnd forest
+    rf_model = train_model(X_train, y_train, preprocessor, model_type='rf')
     save_model(rf_model, "models/time_aware/random_forest.pkl")
-    xgb_model = train_model(X_train, y_train, preprocessor, model_type='xgb') # XGBoost
+    xgb_model = train_model(X_train, y_train, preprocessor, model_type='xgb')
     save_model(xgb_model, "models/time_aware/xgboost.pkl")
 
     print("\nTraining completed for both models")
+
+
+if __name__ == "__main__":
+    main()

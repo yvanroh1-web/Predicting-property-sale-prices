@@ -1,4 +1,4 @@
-"""Evaluation script for time-aware models (RF & XGBoost) - assesses performance using MAE, RMSE, and R²."""
+"""Evaluation script for time-aware models (RF & XGBoost) - assesses performance using MAE, RMSE, and R2."""
 
 import os
 
@@ -128,19 +128,19 @@ def evaluate_model(model, X_train, y_train, X_val, y_val, X_test, y_test, model_
         'Model': model_name,
         'Train MAE (log)': train_mae_log,
         'Train RMSE (log)': train_rmse_log,
-        'Train R²': train_r2,
+        'Train R2': train_r2,
         'Val MAE (log)': val_mae_log,
         'Val RMSE (log)': val_rmse_log,
-        'Val R²': val_r2,
+        'Val R2': val_r2,
         'Test MAE (log)': test_mae_log,
         'Test RMSE (log)': test_rmse_log,
-        'Test R²': test_r2,
-        'Train MAE (€)': train_mae_price,
-        'Train RMSE (€)': train_rmse_price,
-        'Val MAE (€)': val_mae_price,
-        'Val RMSE (€)': val_rmse_price,
-        'Test MAE (€)': test_mae_price,
-        'Test RMSE (€)': test_rmse_price
+        'Test R2': test_r2,
+        'Train MAE (EUR)': train_mae_price,
+        'Train RMSE (EUR)': train_rmse_price,
+        'Val MAE (EUR)': val_mae_price,
+        'Val RMSE (EUR)': val_rmse_price,
+        'Test MAE (EUR)': test_mae_price,
+        'Test RMSE (EUR)': test_rmse_price
     }
 
 def create_comparison_table(results: list) -> pd.DataFrame:
@@ -154,7 +154,7 @@ def create_comparison_table(results: list) -> pd.DataFrame:
     pd.DataFrame: Sorted results dataframe.
     """
     df_results = pd.DataFrame(results)
-    df_results = df_results.sort_values('Test R²', ascending=False)
+    df_results = df_results.sort_values('Test R2', ascending=False)
     return df_results
 
 def plot_predictions_vs_actual(models, X_test, y_test, output_dir: str = "results/plots_timeaware"):
@@ -194,8 +194,8 @@ def plot_predictions_vs_actual(models, X_test, y_test, output_dir: str = "result
         axes[idx].plot([y_test_sample.min(), y_test_sample.max()],
                        [y_test_sample.min(), y_test_sample.max()],
                        'r--', lw=2, label='Perfect prediction')
-        axes[idx].set_xlabel('Actual Price (€)')
-        axes[idx].set_ylabel('Predicted Price (€)')
+        axes[idx].set_xlabel('Actual Price (EUR)')
+        axes[idx].set_ylabel('Predicted Price (EUR)')
         axes[idx].set_title(f'{name}')
         axes[idx].legend()
         axes[idx].grid(True, alpha=0.3)
@@ -221,35 +221,35 @@ def plot_metrics_comparison(df_results: pd.DataFrame, output_dir: str = "results
     width = 0.25
 
     # MAE comparison
-    axes[0].bar([i-width for i in x], df_results['Train MAE (€)'], width=width, alpha=0.7, label='Train', color='orange')
-    axes[0].bar(x, df_results['Val MAE (€)'], width=width, alpha=0.7, label='Val', color='green')
-    axes[0].bar([i+width for i in x], df_results['Test MAE (€)'], width=width, alpha=0.7, label='Test', color='steelblue')
+    axes[0].bar([i-width for i in x], df_results['Train MAE (EUR)'], width=width, alpha=0.7, label='Train', color='orange')
+    axes[0].bar(x, df_results['Val MAE (EUR)'], width=width, alpha=0.7, label='Val', color='green')
+    axes[0].bar([i+width for i in x], df_results['Test MAE (EUR)'], width=width, alpha=0.7, label='Test', color='steelblue')
     axes[0].set_xticks(x)
     axes[0].set_xticklabels(df_results['Model'], rotation=45, ha='right')
-    axes[0].set_ylabel('MAE (€)')
+    axes[0].set_ylabel('MAE (EUR)')
     axes[0].set_title('Mean Absolute Error')
     axes[0].legend()
     axes[0].grid(True, alpha=0.3)
 
     # RMSE comparison
-    axes[1].bar([i-width for i in x], df_results['Train RMSE (€)'], width=width, alpha=0.7, label='Train', color='orange')
-    axes[1].bar(x, df_results['Val RMSE (€)'], width=width, alpha=0.7, label='Val', color='green')
-    axes[1].bar([i+width for i in x], df_results['Test RMSE (€)'], width=width, alpha=0.7, label='Test', color='steelblue')
+    axes[1].bar([i-width for i in x], df_results['Train RMSE (EUR)'], width=width, alpha=0.7, label='Train', color='orange')
+    axes[1].bar(x, df_results['Val RMSE (EUR)'], width=width, alpha=0.7, label='Val', color='green')
+    axes[1].bar([i+width for i in x], df_results['Test RMSE (EUR)'], width=width, alpha=0.7, label='Test', color='steelblue')
     axes[1].set_xticks(x)
     axes[1].set_xticklabels(df_results['Model'], rotation=45, ha='right')
-    axes[1].set_ylabel('RMSE (€)')
+    axes[1].set_ylabel('RMSE (EUR)')
     axes[1].set_title('Root Mean Squared Error')
     axes[1].legend()
     axes[1].grid(True, alpha=0.3)
 
-    # R² comparison
-    axes[2].bar([i-width for i in x], df_results['Train R²'], width=width, alpha=0.7, label='Train', color='orange')
-    axes[2].bar(x, df_results['Val R²'], width=width, alpha=0.7, label='Val', color='green')
-    axes[2].bar([i+width for i in x], df_results['Test R²'], width=width, alpha=0.7, label='Test', color='steelblue')
+    # R2 comparison
+    axes[2].bar([i-width for i in x], df_results['Train R2'], width=width, alpha=0.7, label='Train', color='orange')
+    axes[2].bar(x, df_results['Val R2'], width=width, alpha=0.7, label='Val', color='green')
+    axes[2].bar([i+width for i in x], df_results['Test R2'], width=width, alpha=0.7, label='Test', color='steelblue')
     axes[2].set_xticks(x)
     axes[2].set_xticklabels(df_results['Model'], rotation=45, ha='right')
-    axes[2].set_ylabel('R²')
-    axes[2].set_title('R² Score')
+    axes[2].set_ylabel('R2')
+    axes[2].set_title('R2 Score')
     axes[2].legend()
     axes[2].grid(True, alpha=0.3)
     axes[2].set_ylim([0, 1])
@@ -282,14 +282,16 @@ def print_best_model(df_results: pd.DataFrame):
     best_model = df_results.iloc[0]
 
     print(f"\nBest Model: {best_model['Model']}")
-    print(f"  Train R²: {best_model['Train R²']:.4f}")
-    print(f"  Val R²: {best_model['Val R²']:.4f}")
-    print(f"  Test R²: {best_model['Test R²']:.4f}")
-    print(f"  Test MAE: {best_model['Test MAE (€)']:,.0f}€")
-    print(f"  Test RMSE: {best_model['Test RMSE (€)']:,.0f}€")
-    print(f"  Explains {best_model['Test R²']*100:.2f}% of price variance")
+    print(f"  Train R2: {best_model['Train R2']:.4f}")
+    print(f"  Val R2: {best_model['Val R2']:.4f}")
+    print(f"  Test R2: {best_model['Test R2']:.4f}")
+    print(f"  Test MAE: {best_model['Test MAE (EUR)']:,.0f} EUR")
+    print(f"  Test RMSE: {best_model['Test RMSE (EUR)']:,.0f} EUR")
+    print(f"  Explains {best_model['Test R2']*100:.2f}% of price variance")
 
-if __name__ == "__main__":
+
+def main():
+    """Main function to run the time-aware model evaluation pipeline."""
     print("Time-Aware Models Evaluation (RF & XGBoost)\n")
 
     # Load train, validation and test data
@@ -325,7 +327,7 @@ if __name__ == "__main__":
     for name, model in models.items():
         result = evaluate_model(model, X_train, y_train, X_val, y_val, X_test, y_test, name)
         results.append(result)
-        print(f"  {name}: Val R²={result['Val R²']:.4f}, Test R²={result['Test R²']:.4f}, Test MAE={result['Test MAE (€)']:,.0f}€")
+        print(f"  {name}: Val R2={result['Val R2']:.4f}, Test R2={result['Test R2']:.4f}, Test MAE={result['Test MAE (EUR)']:,.0f} EUR")
 
     # Create comparison table
     df_results = create_comparison_table(results)
@@ -334,9 +336,13 @@ if __name__ == "__main__":
     print_best_model(df_results)
 
     # Generate visualizations
-    print("Generating visualizations:")
+    print("\nGenerating visualizations:")
     plot_predictions_vs_actual(models, X_test, y_test)
     plot_metrics_comparison(df_results)
 
     # Save results to CSV
     save_results(df_results)
+
+
+if __name__ == "__main__":
+    main()

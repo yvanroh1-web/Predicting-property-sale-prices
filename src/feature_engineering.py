@@ -97,7 +97,7 @@ def handle_outliers_percentile(df: pd.DataFrame, lower: float = 0.001, upper: fl
     removed = initial_count - len(df)
     percentage = removed / initial_count * 100
     print(f"Outliers removed (percentile method): {removed:,} rows ({percentage:.2f}%)")
-    print(f"  Price range kept: {price_lower:,.0f}€ to {price_upper:,.0f}€")
+    print(f"  Price range kept: {price_lower:,.0f} EUR to {price_upper:,.0f} EUR")
 
     return df
 
@@ -207,8 +207,13 @@ def save_featured_data(df: pd.DataFrame, output_path: str = "data/processed/dvf_
     print(f"Featured data saved to: {output_path}")
     print(f"File size: {file_size_mb:.2f} MB")
 
-if __name__ == "__main__":
-    # Execution of feature-engineering steps
+
+def main():
+    """Main function to run the feature engineering pipeline."""
     df = load_data()
     df = process_features(df)
     save_featured_data(df)
+
+
+if __name__ == "__main__":
+    main()

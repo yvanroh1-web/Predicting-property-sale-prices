@@ -201,10 +201,12 @@ def save_clean_data(df: pd.DataFrame, output_path: str = "data/processed/dvf_pro
     df.to_parquet(output_path, index=False)
 
     file_size_mb = os.path.getsize(output_path) / (1024 * 1024)
-    print(f"Final dataset: {len(df):,} rows × {len(df.columns)} columns")
+    print(f"Final dataset: {len(df):,} rows x {len(df.columns)} columns")
     print(f"File size: {file_size_mb:.1f} MB\n")
 
-if __name__ == "__main__":
+
+def main():
+    """Main function to run the preprocessing pipeline."""
     print("DVF dataset (2020-2024) preprocessing:")
     print("\nData source: https://www.data.gouv.fr/fr/datasets/demandes-de-valeurs-foncieres/")
 
@@ -212,7 +214,7 @@ if __name__ == "__main__":
     raw_folder = "data/raw"
 
     if IS_CI:
-        print("Detected CI environment – using local raw data from repository")
+        print("Detected CI environment - using local raw data from repository")
         if not os.path.exists(raw_folder) or not any(f.endswith(".csv") for f in os.listdir(raw_folder)):
             raise FileNotFoundError("No CSV files found in data/raw/. Please include DVF raw files in the repository.")
         df = load_data(raw_folder)
@@ -229,3 +231,7 @@ if __name__ == "__main__":
     print("Preprocessing completed")
     print(f"Final rows: {len(df):,}")
     print(f"Final columns: {len(df.columns)}")
+
+
+if __name__ == "__main__":
+    main()
