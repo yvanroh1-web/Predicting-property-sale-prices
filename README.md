@@ -68,6 +68,28 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## Usage
+
+### Run Full Pipeline
+```bash
+python main.py
+```
+
+This executes the complete workflow:
+1. Data preprocessing
+2. Feature engineering
+3. Models training (only complex models, as they lead to better results)
+4. Models evaluation
+
+### Run Individual Steps
+```bash
+python main.py --step preprocess   # Data preprocessing only
+python main.py --step features     # Feature engineering only
+python main.py --step train        # Model training only
+python main.py --step evaluate     # Model evaluation only
+python main.py --step all          # Full pipeline (default)
+```
+
 ## Pipeline Architecture
 
 The ML pipeline consists of six scripts that execute sequentially:
@@ -175,9 +197,10 @@ Predicting-property-sale-prices/
 │   ├── processed/                # Processed dataset
 │   │   ├── dvf_processed.parquet
 │   │   └── dvf_featured.parquet
-│   └── sample/                   # Sample data for CI/CD
-│       └── dvf_featured_sample.parquet
 │
+|__ docs /
+|   |__ report.pdf                # Project full report
+|
 ├── models/                       # Trained model (.pkl)
 │   ├── linear_regression.pkl
 │   ├── ridge.pkl
@@ -191,6 +214,8 @@ Predicting-property-sale-prices/
 │   └── *.png                     # Visualization plots
 │
 ├── src/                          # Source code modules
+    |__init__.py
+    |
 │   ├── preprocessing.py          
 │   ├── feature_engineering.py    
 │   ├── linear_models.py          
@@ -200,12 +225,15 @@ Predicting-property-sale-prices/
 │
 ├── notebooks/
 │   └── Exploration_notebook.ipynb  # Initial exploration of data
+|   |_ Exploration_notebook.pdf     # Notebook PDF version
 │
 ├── .gitattributes                # Git LFS configuration
 ├── requirements.txt              # Python dependencies
 ├── PROPOSAL.md                   # Project proposal
-├── report.pdf                    # Technical report
-└── README.md                    
+├── report.pdf                    # Technical report     
+|__ main.py                       # Pipeline execution script
+|
+└── README.md             
 ```
 
 ---
